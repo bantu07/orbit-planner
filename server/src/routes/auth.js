@@ -16,21 +16,15 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// The cookie/JWT is a long-lived *safety backstop* only (so a stolen cookie can't be replayed
+// The JWT is a long-lived *safety backstop* only (so a stolen token can't be replayed
 // forever). The actual 20-minute *idle* timeout is enforced in middleware/auth.js against
 // last_activity_at in the database, and that check runs on every authenticated request —
 // including a fresh page load after the browser was closed and reopened.
-const SESSION_BACKSTOP_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const SESSION_BACKSTOP_MS_EXPIRY = process.env.JWT_EXPIRES_IN || '7d';
 
-function issueSessionCookie(res, user) {
-  const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-  });
-  res.cookie('session_token', token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: SESSION_BACKSTOP_MS,
+function issueToken(user) {
+  return jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
+    expiresIn: SESSION_BACKSTOP_MS_EXPIRY,
   });
 }
 
@@ -77,8 +71,8 @@ router.post('/login', loginLimiter, async (req, res, next) => {
       'UPDATE users SET failed_attempts = 0, locked = FALSE, last_activity_at = NOW() WHERE id = ?',
       [user.id]
     );
-    issueSessionCookie(res, user);
-    res.json({ ok: true, username: user.username });
+    const token = issueToken(user);
+    res.json({ ok: true, username: user.username, token });
   } catch (err) {
     next(err);
   }
@@ -109,7 +103,7 @@ router.post('/unlock', loginLimiter, async (req, res, next) => {
 });
 
 router.post('/logout', requireAuth, async (req, res) => {
-  res.clearCookie('session_token');
+  // Stateless JWT — nothing to invalidate server-side. The client discards its stored token.
   res.json({ ok: true });
 });
 

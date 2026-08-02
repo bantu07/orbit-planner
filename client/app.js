@@ -1,10 +1,14 @@
 const API = window.API_BASE;
+const TOKEN_KEY = 'orbit_token';
 
 async function api(path, options = {}) {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
   const res = await fetch(`${API}${path}`, {
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
     ...options,
+    headers,
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -21,11 +25,7 @@ let brainInstance = null;
 function initBrainCanvas() {
   const canvas = document.getElementById('brainCanvas');
   if (canvas && !brainInstance) {
-    brainInstance = new NeuronBrain(canvas, {
-      latSteps: 22,
-      lonSteps: 40,
-      colors: ['#3DF5FF', '#3DF5FF', '#5FB8FF', '#A97BFF', '#FF4FCB'],
-    });
+    brainInstance = new NeuronBrain(canvas);
   }
 }
 document.addEventListener('DOMContentLoaded', initBrainCanvas);
@@ -70,6 +70,7 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
   const errEl = document.getElementById('loginError');
   try {
     const data = await api('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
+    localStorage.setItem(TOKEN_KEY, data.token);
     errEl.style.display = 'none';
     document.getElementById('loginScreen').classList.add('hidden');
     document.body.classList.remove('pre-auth');
@@ -105,11 +106,13 @@ document.getElementById('unlockBtn').addEventListener('click', async () => {
 
 document.getElementById('logoutBtn').addEventListener('click', async () => {
   try { await api('/auth/logout', { method: 'POST' }); } catch (e) { /* ignore */ }
+  localStorage.removeItem(TOKEN_KEY);
   location.reload();
 });
 
-// Try to resume an existing session on page load (cookie still valid + not idle-expired server-side)
+// Try to resume an existing session on page load (stored token still valid + not idle-expired server-side)
 (async function tryResumeSession() {
+  if (!localStorage.getItem(TOKEN_KEY)) return; // nothing to resume — show the login screen
   try {
     const me = await api('/auth/me');
     document.getElementById('loginScreen').classList.add('hidden');
@@ -118,7 +121,7 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
     document.getElementById('greetUsername').textContent = me.username;
     startApp();
   } catch (e) {
-    // not logged in — show the login screen (default state)
+    localStorage.removeItem(TOKEN_KEY); // stale/expired token — clear it
   }
 })();
 
@@ -162,6 +165,7 @@ function resetIdleTimer() {
   clearTimeout(idleTimer);
   idleTimer = setTimeout(async () => {
     try { await api('/auth/logout', { method: 'POST' }); } catch (e) { /* already expired server-side */ }
+    localStorage.removeItem(TOKEN_KEY);
     location.reload();
   }, IDLE_LIMIT_MS);
 }
