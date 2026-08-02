@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orbit — Daily Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body class="pre-auth">
+<div id="cursorGlow"></div>
+
+<!-- ================= LOGIN ================= -->
+<div id="loginScreen">
+  <div class="login-visual">
+    <canvas id="brainCanvas"></canvas>
+  </div>
+
+  <div class="login-panel">
+    <div class="login-card" id="loginFormCard">
+      <div class="login-brand"><div></div></div>
+      <h1 class="display">Welcome back</h1>
+      <div class="sub">Sign in to your personal planner</div>
+
+      <div class="field">
+        <label>Username</label>
+        <div class="login-input-wrap">
+          <svg class="left-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c1.5-4 5-6 8-6s6.5 2 8 6"/></svg>
+          <input type="text" id="loginUser" placeholder="Username" autocomplete="username">
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:8px;">
+        <label>Password</label>
+        <div class="login-input-wrap">
+          <svg class="left-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+          <svg class="toggle-eye" id="togglePassEye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+        </div>
+      </div>
+      <div style="text-align:right; margin-bottom:18px;">
+        <span class="link-btn" style="font-size:11px;">Forgot password?</span>
+      </div>
+      <button class="btn-primary login-btn-gradient" id="loginBtn">Sign in</button>
+      <div class="sub" id="loginError" style="color:var(--magenta); font-size:12px; margin-top:14px; display:none;"></div>
+    </div>
+
+    <div class="login-card" id="lockoutCard" style="display:none;">
+      <div class="login-brand" style="background:conic-gradient(from 220deg, var(--magenta), var(--amber), var(--magenta));"><div></div></div>
+      <h1 class="display">Account locked</h1>
+      <div class="sub">Too many incorrect attempts. Enter the master passphrase to unlock.</div>
+      <div class="field">
+        <label>Master passphrase</label>
+        <div class="login-input-wrap">
+          <svg class="left-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          <input type="password" id="masterPassInput" placeholder="Master passphrase">
+        </div>
+      </div>
+      <button class="btn-primary login-btn-gradient" id="unlockBtn">Unlock account</button>
+      <div class="sub" id="unlockError" style="color:var(--magenta); font-size:12px; margin-top:14px; display:none;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= APP SHELL ================= -->
+<div class="mobilebar">
+  <div class="navicon active" data-view="dashboard">◆<span style="font-size:10px">Dashboard</span></div>
+  <div class="navicon" data-view="planner">✎<span style="font-size:10px">Planner</span></div>
+  <div class="navicon" data-view="journal">☰<span style="font-size:10px">Journal</span></div>
+</div>
+
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand" id="brandLogo" data-view="dashboard" title="Go to Dashboard"><div class="brand-dot"></div></div>
+    <div class="navicon active" data-view="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>
+      <span class="tag">Dashboard</span>
+    </div>
+    <div class="navicon" data-view="planner">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 19l4-1 11-11-3-3L5 15l-1 4z"/></svg>
+      <span class="tag">Create Planner</span>
+    </div>
+    <div class="navicon" data-view="journal">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h11a2 2 0 0 1 2 2v16l-4-2-4 2-4-2-4 2V6a3 3 0 0 1 3-3z"/></svg>
+      <span class="tag">Journal</span>
+    </div>
+    <div class="sidebar-foot"></div>
+    <div class="navicon" id="logoutBtn" style="margin-top:6px; color:var(--faint);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      <span class="tag">Log out</span>
+    </div>
+  </aside>
+
+  <main>
+    <!-- ================= DASHBOARD ================= -->
+    <section class="view active" id="dashboard">
+      <div class="topbar">
+        <div>
+          <div class="eyebrow" id="todayLabel">Today</div>
+          <h1>Good day, <span id="greetUsername">—</span></h1>
+          <div class="sub" id="dashboardSummary">Loading your day…</div>
+        </div>
+      </div>
+
+      <div class="dash-grid">
+        <div class="card">
+          <div class="card-title">Today's blocks</div>
+          <div class="card-sub">Live from the planner</div>
+          <div id="todayBlocksList" class="timeline" style="margin-top:10px;"></div>
+        </div>
+        <div class="stat-col">
+          <div class="stat-row" id="statCards"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-head-row">
+          <div>
+            <div class="card-title">Activity breakdown</div>
+            <div class="card-sub">Where your time actually goes</div>
+          </div>
+          <div class="tabbar" id="breakdownTabs">
+            <div class="tabbtn sel" data-range="daily">Daily</div>
+            <div class="tabbtn" data-range="weekly">Weekly</div>
+            <div class="tabbtn" data-range="monthly">Monthly</div>
+          </div>
+        </div>
+        <div class="breakdown-grid">
+          <div class="chart-box" style="height:200px;"><canvas id="pieChart"></canvas></div>
+          <div class="breakdown-legend" id="pieLegend"></div>
+        </div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="card">
+          <div class="card-title">This week</div>
+          <div class="card-sub">Hours planned vs. completed</div>
+          <div class="chart-box"><canvas id="weekChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">This month</div>
+          <div class="card-sub">Completion rate trend</div>
+          <div class="chart-box"><canvas id="monthChart"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= CREATE PLANNER ================= -->
+    <section class="view" id="planner">
+      <div class="topbar">
+        <div>
+          <div class="eyebrow">New entry</div>
+          <h1>Plan your day</h1>
+          <div class="sub">Blocks save straight to today's schedule.</div>
+        </div>
+      </div>
+
+      <div class="planner-grid">
+        <div class="card">
+          <div class="card-title">Add a block</div>
+          <div class="card-sub">Give it a time, a name, and a category</div>
+
+          <div class="field">
+            <label>Activity</label>
+            <input type="text" id="blockTitle" placeholder="e.g. Write project proposal">
+          </div>
+          <div class="field">
+            <label>Time range</label>
+            <div class="time-row">
+              <input type="time" id="blockStart">
+              <input type="time" id="blockEnd">
+            </div>
+          </div>
+          <div class="field">
+            <label>Category</label>
+            <div class="chip-row" id="categoryChips"></div>
+          </div>
+          <div class="field">
+            <label>Notes (optional)</label>
+            <textarea id="blockNotes" rows="3" placeholder="Any detail worth remembering later..."></textarea>
+          </div>
+          <button class="btn-primary" id="addBlockBtn">Add to today's plan</button>
+          <div class="sub" id="blockFormMsg" style="font-size:12px; margin-top:10px; display:none;"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head-row">
+            <div>
+              <div class="card-title">Timeline</div>
+              <div class="card-sub" id="timelineSub">Tap a block to edit</div>
+            </div>
+            <div class="tabbar" id="timelineTabs">
+              <div class="tabbtn sel" data-range="today">Today</div>
+              <div class="tabbtn" data-range="pastweek">Past week</div>
+            </div>
+          </div>
+          <div class="timeline" id="timelineToday"></div>
+          <div class="timeline" id="timelinePastWeek" style="display:none;"></div>
+          <div style="height:1px; background:var(--line); margin:16px 0 12px;"></div>
+          <div class="sub" style="font-size:11.5px; color:var(--faint);">Entries older than 7 days are automatically archived on the server — new plans overwrite the oldest day on a rolling basis.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= JOURNAL ================= -->
+    <section class="view" id="journal">
+      <div class="topbar">
+        <div>
+          <div class="eyebrow">Reflect</div>
+          <h1>Journal</h1>
+          <div class="sub">A quiet record of how each day actually went.</div>
+        </div>
+      </div>
+
+      <div class="journal-grid">
+        <div class="card">
+          <div class="card-title">New entry — today</div>
+          <div class="card-sub">How did it go?</div>
+          <div class="mood-row" id="moodRow">
+            <div class="mood" data-mood="1">😔</div>
+            <div class="mood" data-mood="2">😐</div>
+            <div class="mood sel" data-mood="3">🙂</div>
+            <div class="mood" data-mood="4">😄</div>
+            <div class="mood" data-mood="5">🤩</div>
+          </div>
+          <div class="field">
+            <textarea id="journalContent" rows="7" placeholder="Write freely..."></textarea>
+          </div>
+          <div class="field">
+            <label>Tags</label>
+            <div class="chip-row" id="journalTags">
+              <div class="chip addchip" id="addTagChip">+ Add tag</div>
+            </div>
+          </div>
+          <button class="btn-primary" id="saveEntryBtn">Save entry</button>
+          <div class="sub" id="journalFormMsg" style="font-size:12px; margin-top:10px; display:none;"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head-row">
+            <div>
+              <div class="card-title">Past entries</div>
+              <div class="card-sub" id="pastEntriesSub">Last 3 entries</div>
+            </div>
+            <span class="link-btn" id="viewAllJournals">View all →</span>
+          </div>
+          <div class="entries-grid" id="journalEntryList"></div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="note">
+      <span class="status-dot"></span>Orbit © 2026
+    </footer>
+  </main>
+</div>
+
+<script src="config.js"></script>
+<script src="brain-canvas.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
