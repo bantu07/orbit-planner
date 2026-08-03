@@ -277,6 +277,21 @@
   .entry-text{font-size:13.5px; line-height:1.6; color:#C7CFE8;}
   .entry-tags{margin-top:10px; display:flex; gap:6px;}
   .etag{font-size:10px; padding:3px 9px; border-radius:100px; background:rgba(61,245,255,0.08); color:var(--cyan); border:1px solid rgba(61,245,255,0.25);}
+  /* Robust per-tag coloring via a CSS custom property — avoids fragile string-concatenated
+     hex+alpha values in JS, which silently break if a color is ever missing/malformed. */
+  .etag[style*="--tag-color"]{
+    color:var(--tag-color);
+    border-color:color-mix(in srgb, var(--tag-color) 45%, transparent);
+    background:color-mix(in srgb, var(--tag-color) 14%, transparent);
+  }
+
+  .entries-grid.scrollable{
+    max-height:460px; overflow-y:auto; padding-right:8px; margin-right:-8px;
+  }
+  .entries-grid.scrollable::-webkit-scrollbar{width:8px;}
+  .entries-grid.scrollable::-webkit-scrollbar-track{background:transparent;}
+  .entries-grid.scrollable::-webkit-scrollbar-thumb{background:rgba(140,160,255,0.25); border-radius:4px;}
+  .entries-grid.scrollable::-webkit-scrollbar-thumb:hover{background:rgba(140,160,255,0.4);}
 
   footer.note{
     margin-top:32px; padding-top:16px; border-top:1px solid var(--line);
