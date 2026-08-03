@@ -420,31 +420,97 @@ async function loadPlanner() {
   const pastBlocks = weekBlocks.filter((b) => b.block_date !== today);
   renderTimeline('timelineToday', todayBlocks, true);
   renderTimeline('timelinePastWeek', pastBlocks, false);
-  renderPastPlannerEntries(pastBlocks);
+  plannerPastEntriesCache = pastBlocks;
+  renderPastPlannerEntries();
 }
 
-function renderPastPlannerEntries(blocks) {
+let plannerPastEntriesCache = [];
+let plannerEntriesShowAll = false;
+const PLANNER_ENTRIES_PREVIEW_COUNT = 4;
+
+function renderPastPlannerEntries() {
+  const blocks = plannerPastEntriesCache;
   const list = document.getElementById('pastPlannerEntries');
   if (!blocks.length) {
     list.innerHTML = '<div class="sub">Nothing logged in the past week yet.</div>';
+    document.getElementById('viewAllPlannerEntries').style.display = 'none';
     return;
   }
+  document.getElementById('viewAllPlannerEntries').style.display = 'inline';
+
   // most recent first
   const sorted = [...blocks].sort((a, b) => (a.block_date === b.block_date
     ? b.start_time.localeCompare(a.start_time)
     : b.block_date.localeCompare(a.block_date)));
+  const visible = plannerEntriesShowAll ? sorted : sorted.slice(0, PLANNER_ENTRIES_PREVIEW_COUNT);
 
-  list.innerHTML = sorted.map((b) => `
-    <div class="entry-card" style="border-left-color:${b.category_color || 'var(--violet)'};">
+  list.classList.toggle('scrollable', plannerEntriesShowAll && sorted.length > PLANNER_ENTRIES_PREVIEW_COUNT);
+
+  list.innerHTML = visible.map((b) => `
+    <div class="entry-card" data-id="${b.id}" style="border-left-color:${b.category_color || 'var(--violet)'};">
+      <div class="entry-actions">
+        <div class="icon-btn edit-planner-entry" title="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19l4-1 11-11-3-3L5 15l-1 4z"/></svg></div>
+        <div class="icon-btn danger delete-planner-entry" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0v12a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V7"/></svg></div>
+      </div>
       <div class="entry-head">
         <span>${new Date(b.block_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', weekday: 'long' })}</span>
         <span class="mono" style="font-size:11px; color:var(--muted);">${b.start_time.slice(0,5)}–${b.end_time.slice(0,5)}</span>
       </div>
-      <div style="font-size:13.5px; font-weight:500; margin-top:6px;">${escapeHtml(b.title)}</div>
+      <div class="entry-block-title" style="font-size:13.5px; font-weight:500; margin-top:6px;">${escapeHtml(b.title)}</div>
       <div class="entry-text" style="margin-top:6px; ${b.notes ? '' : 'font-style:italic; color:var(--faint);'}">${b.notes ? escapeHtml(b.notes) : 'No additional notes'}</div>
-      <div class="entry-tags"><span class="etag" style="color:${b.category_color || 'var(--violet)'}; border-color:${b.category_color || 'var(--violet)'}66; background:${b.category_color || 'var(--violet)'}1A;">${b.category_name || 'Uncategorized'}</span></div>
+      <div class="entry-tags"><span class="etag" style="--tag-color:${b.category_color || '#A97BFF'}">${b.category_name || 'Uncategorized'}</span></div>
     </div>`).join('');
+
+  list.querySelectorAll('.edit-planner-entry').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const card = btn.closest('.entry-card');
+      const titleEl = card.querySelector('.entry-block-title');
+      const notesEl = card.querySelector('.entry-text');
+      const editing = titleEl.getAttribute('contenteditable') === 'true';
+      if (editing) {
+        titleEl.removeAttribute('contenteditable');
+        notesEl.removeAttribute('contenteditable');
+        btn.style.color = '';
+        const newNotes = notesEl.textContent.trim();
+        try {
+          await api(`/planner/blocks/${card.dataset.id}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+              title: titleEl.textContent.trim(),
+              notes: newNotes === 'No additional notes' ? '' : newNotes,
+            }),
+          });
+        } catch (err) { alert(err.data?.error || 'Could not save changes'); }
+      } else {
+        titleEl.setAttribute('contenteditable', 'true');
+        notesEl.setAttribute('contenteditable', 'true');
+        titleEl.focus();
+        btn.style.color = 'var(--cyan)';
+      }
+    });
+  });
+  list.querySelectorAll('.delete-planner-entry').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const card = btn.closest('.entry-card');
+      if (!confirm('Delete this entry?')) return;
+      try {
+        await api(`/planner/blocks/${card.dataset.id}`, { method: 'DELETE' });
+        plannerPastEntriesCache = plannerPastEntriesCache.filter((b) => String(b.id) !== card.dataset.id);
+        renderPastPlannerEntries();
+        await loadDashboard();
+      } catch (err) { alert(err.data?.error || 'Could not delete'); }
+    });
+  });
 }
+
+document.getElementById('viewAllPlannerEntries').addEventListener('click', () => {
+  plannerEntriesShowAll = !plannerEntriesShowAll;
+  document.getElementById('viewAllPlannerEntries').textContent = plannerEntriesShowAll ? 'Show less ←' : 'View all →';
+  document.getElementById('pastPlannerSub').textContent = plannerEntriesShowAll
+    ? 'All entries from the last 7 days'
+    : 'Full detail — name, time, category, and notes from the last 7 days';
+  renderPastPlannerEntries();
+});
 
 function renderTimeline(containerId, blocks, showTimeOnly) {
   const el = document.getElementById(containerId);
@@ -546,10 +612,17 @@ document.querySelectorAll('#moodRow .mood').forEach((m) => {
 
 let pendingTags = [];
 const TAG_COLORS = ['#3DF5FF', '#A97BFF', '#FF4FCB', '#FFC15E'];
+// Same tag name always maps to the same color, wherever it's rendered (compose form or past entries) —
+// no DB column needed, just a stable hash over the name.
+function colorForTag(name) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  return TAG_COLORS[hash % TAG_COLORS.length];
+}
 document.getElementById('addTagChip').addEventListener('click', () => {
   const name = prompt('New tag name:');
   if (!name) return;
-  pendingTags.push({ name: name.trim(), selected: true, color: TAG_COLORS[pendingTags.length % TAG_COLORS.length] });
+  pendingTags.push({ name: name.trim(), selected: true, color: colorForTag(name.trim()) });
   renderPendingTags();
 });
 function renderPendingTags() {
@@ -613,6 +686,7 @@ async function loadJournal() {
 function renderJournalList(entries) {
   const list = document.getElementById('journalEntryList');
   const visible = allEntriesShown ? entries : entries.slice(0, 3);
+  list.classList.toggle('scrollable', allEntriesShown && entries.length > 3);
   if (!visible.length) {
     list.innerHTML = '<div class="sub">No journal entries yet.</div>';
     return;
@@ -625,7 +699,7 @@ function renderJournalList(entries) {
       </div>
       <div class="entry-head"><span>${new Date(e.entry_date).toLocaleDateString(undefined,{month:'short',day:'numeric',weekday:'long'})}</span><span>${MOOD_EMOJI[e.mood] || ''}</span></div>
       <div class="entry-text">${escapeHtml(e.content)}</div>
-      <div class="entry-tags">${(e.tags||[]).map(t=>`<span class="etag">${escapeHtml(t.name)}</span>`).join('')}</div>
+      <div class="entry-tags">${(e.tags||[]).map(t=>`<span class="etag" style="--tag-color:${colorForTag(t.name)}">${escapeHtml(t.name)}</span>`).join('')}</div>
     </div>`).join('');
 
   list.querySelectorAll('.edit-entry').forEach((btn) => {
