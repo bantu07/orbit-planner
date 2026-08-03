@@ -417,8 +417,33 @@ async function loadPlanner() {
     api(`/planner/blocks?from=${weekAgo}&to=${today}`),
   ]);
 
+  const pastBlocks = weekBlocks.filter((b) => b.block_date !== today);
   renderTimeline('timelineToday', todayBlocks, true);
-  renderTimeline('timelinePastWeek', weekBlocks.filter((b) => b.block_date !== today), false);
+  renderTimeline('timelinePastWeek', pastBlocks, false);
+  renderPastPlannerEntries(pastBlocks);
+}
+
+function renderPastPlannerEntries(blocks) {
+  const list = document.getElementById('pastPlannerEntries');
+  if (!blocks.length) {
+    list.innerHTML = '<div class="sub">Nothing logged in the past week yet.</div>';
+    return;
+  }
+  // most recent first
+  const sorted = [...blocks].sort((a, b) => (a.block_date === b.block_date
+    ? b.start_time.localeCompare(a.start_time)
+    : b.block_date.localeCompare(a.block_date)));
+
+  list.innerHTML = sorted.map((b) => `
+    <div class="entry-card" style="border-left-color:${b.category_color || 'var(--violet)'};">
+      <div class="entry-head">
+        <span>${new Date(b.block_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', weekday: 'long' })}</span>
+        <span class="mono" style="font-size:11px; color:var(--muted);">${b.start_time.slice(0,5)}–${b.end_time.slice(0,5)}</span>
+      </div>
+      <div style="font-size:13.5px; font-weight:500; margin-top:6px;">${escapeHtml(b.title)}</div>
+      <div class="entry-text" style="margin-top:6px; ${b.notes ? '' : 'font-style:italic; color:var(--faint);'}">${b.notes ? escapeHtml(b.notes) : 'No additional notes'}</div>
+      <div class="entry-tags"><span class="etag" style="color:${b.category_color || 'var(--violet)'}; border-color:${b.category_color || 'var(--violet)'}66; background:${b.category_color || 'var(--violet)'}1A;">${b.category_name || 'Uncategorized'}</span></div>
+    </div>`).join('');
 }
 
 function renderTimeline(containerId, blocks, showTimeOnly) {
