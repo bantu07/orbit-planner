@@ -473,6 +473,8 @@ function renderPastPlannerEntries() {
         btn.style.color = '';
         const newNotes = notesEl.textContent.trim();
         try {
+          // Only title/notes are ever sent here — block_date/start_time/end_time are left
+          // untouched, so the original time always stays exactly as it was.
           await api(`/planner/blocks/${card.dataset.id}`, {
             method: 'PUT',
             body: JSON.stringify({
@@ -480,6 +482,7 @@ function renderPastPlannerEntries() {
               notes: newNotes === 'No additional notes' ? '' : newNotes,
             }),
           });
+          await loadPlanner(); // keeps the (now read-only) Timeline in sync with this edit
         } catch (err) { alert(err.data?.error || 'Could not save changes'); }
       } else {
         titleEl.setAttribute('contenteditable', 'true');
@@ -495,9 +498,8 @@ function renderPastPlannerEntries() {
       if (!confirm('Delete this entry?')) return;
       try {
         await api(`/planner/blocks/${card.dataset.id}`, { method: 'DELETE' });
-        plannerPastEntriesCache = plannerPastEntriesCache.filter((b) => String(b.id) !== card.dataset.id);
-        renderPastPlannerEntries();
-        await loadDashboard();
+        await loadPlanner();   // keeps Timeline in sync
+        await loadDashboard(); // hours/category totals changed
       } catch (err) { alert(err.data?.error || 'Could not delete'); }
     });
   });
@@ -506,9 +508,7 @@ function renderPastPlannerEntries() {
 document.getElementById('viewAllPlannerEntries').addEventListener('click', () => {
   plannerEntriesShowAll = !plannerEntriesShowAll;
   document.getElementById('viewAllPlannerEntries').textContent = plannerEntriesShowAll ? 'Show less ←' : 'View all →';
-  document.getElementById('pastPlannerSub').textContent = plannerEntriesShowAll
-    ? 'All entries from the last 7 days'
-    : 'Full detail — name, time, category, and notes from the last 7 days';
+  document.getElementById('pastPlannerSub').textContent = 'Entries from past 7 days';
   renderPastPlannerEntries();
 });
 
@@ -523,43 +523,10 @@ function renderTimeline(containerId, blocks, showTimeOnly) {
       <div class="tl-time">${showTimeOnly ? b.start_time.slice(0,5) : new Date(b.block_date).toLocaleDateString(undefined,{month:'short',day:'numeric'})}</div>
       <div class="tl-rail"><div class="tl-dot" style="color:${b.category_color || '#3DF5FF'}; background:${b.category_color || '#3DF5FF'};"></div><div class="tl-line"></div></div>
       <div class="tl-content">
-        <div class="tl-actions">
-          <div class="icon-btn edit-block" title="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19l4-1 11-11-3-3L5 15l-1 4z"/></svg></div>
-          <div class="icon-btn danger delete-block" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0v12a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V7"/></svg></div>
-        </div>
         <div class="t">${escapeHtml(b.title)}</div>
         <div class="d">${b.category_name || 'Uncategorized'} · ${b.start_time.slice(0,5)}–${b.end_time.slice(0,5)}</div>
       </div>
     </div>`).join('');
-
-  el.querySelectorAll('.edit-block').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const item = btn.closest('.tl-item');
-      const titleEl = item.querySelector('.t');
-      const editing = titleEl.getAttribute('contenteditable') === 'true';
-      if (editing) {
-        titleEl.removeAttribute('contenteditable');
-        btn.style.color = '';
-        try {
-          await api(`/planner/blocks/${item.dataset.id}`, { method: 'PUT', body: JSON.stringify({ title: titleEl.textContent.trim() }) });
-        } catch (err) { alert(err.data?.error || 'Could not save changes'); }
-      } else {
-        titleEl.setAttribute('contenteditable', 'true');
-        titleEl.focus();
-        btn.style.color = 'var(--cyan)';
-      }
-    });
-  });
-  el.querySelectorAll('.delete-block').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const item = btn.closest('.tl-item');
-      if (!confirm('Delete this block?')) return;
-      try {
-        await api(`/planner/blocks/${item.dataset.id}`, { method: 'DELETE' });
-        item.remove();
-      } catch (err) { alert(err.data?.error || 'Could not delete'); }
-    });
-  });
 }
 
 document.getElementById('addBlockBtn').addEventListener('click', async () => {
