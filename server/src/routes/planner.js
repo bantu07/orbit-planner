@@ -17,15 +17,29 @@ router.get('/categories', async (req, res, next) => {
   }
 });
 
+// Same palette used for the 4 seeded defaults (cyan/violet/magenta/amber), extended so
+// custom categories keep getting a genuinely distinct color instead of all defaulting to cyan.
+const CATEGORY_PALETTE = ['#3DF5FF', '#A97BFF', '#FF4FCB', '#FFC15E', '#4ADE80', '#60A5FA', '#FB923C', '#F472B6'];
+
 router.post('/categories', async (req, res, next) => {
   try {
     const { name, color } = req.body;
     if (!name) return res.status(400).json({ error: 'Category name is required' });
+
+    let assignedColor = color;
+    if (!assignedColor) {
+      const [[{ count }]] = await db.query(
+        'SELECT COUNT(*) AS count FROM categories WHERE user_id = ?',
+        [req.user.id]
+      );
+      assignedColor = CATEGORY_PALETTE[count % CATEGORY_PALETTE.length];
+    }
+
     const [result] = await db.query(
       'INSERT INTO categories (user_id, name, color) VALUES (?, ?, ?)',
-      [req.user.id, name.trim(), color || '#3DF5FF']
+      [req.user.id, name.trim(), assignedColor]
     );
-    res.status(201).json({ id: result.insertId, name, color: color || '#3DF5FF' });
+    res.status(201).json({ id: result.insertId, name, color: assignedColor });
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') {
       return res.status(409).json({ error: 'That category already exists' });
