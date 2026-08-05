@@ -325,7 +325,42 @@ const pieGloss = {
     ctx.restore();
   },
 };
-Chart.register(barValueLabels, pieValueLabels, pieGloss);
+const pieCenterText = {
+  id: 'pieCenterText',
+  afterDatasetsDraw(chart) {
+    if (!chart.options.plugins?.pieCenterText?.enabled) return;
+    const { ctx, chartArea } = chart;
+    if (!chartArea) return;
+    const total = chart.data.datasets[0].data.reduce((a, b) => a + Number(b), 0);
+    const cx = (chartArea.left + chartArea.right) / 2;
+    const cy = (chartArea.top + chartArea.bottom) / 2;
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#EAF0FF';
+    ctx.font = "600 22px 'Space Grotesk', sans-serif";
+    ctx.fillText(`${total.toFixed(1)}h`, cx, cy - 9);
+    ctx.fillStyle = '#8792B0';
+    ctx.font = "600 10px Inter, sans-serif";
+    ctx.fillText('TOTAL', cx, cy + 14);
+    ctx.restore();
+  },
+};
+Chart.register(barValueLabels, pieValueLabels, pieGloss, pieCenterText);
+
+// Consistent, theme-matching tooltip styling across every chart, instead of Chart.js's
+// plain default black box.
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(17,21,42,0.94)';
+Chart.defaults.plugins.tooltip.titleColor = '#EAF0FF';
+Chart.defaults.plugins.tooltip.bodyColor = '#B9C2E6';
+Chart.defaults.plugins.tooltip.borderColor = 'rgba(140,160,255,0.25)';
+Chart.defaults.plugins.tooltip.borderWidth = 1;
+Chart.defaults.plugins.tooltip.padding = 10;
+Chart.defaults.plugins.tooltip.cornerRadius = 8;
+Chart.defaults.plugins.tooltip.boxPadding = 4;
+Chart.defaults.plugins.tooltip.titleFont = { family: "'Space Grotesk', sans-serif", weight: '600', size: 12 };
+Chart.defaults.plugins.tooltip.bodyFont = { family: "'JetBrains Mono', monospace", size: 11 };
 
 const gridColor = 'rgba(140,160,255,0.08)';
 const mutedColor = '#8792B0';
@@ -340,7 +375,7 @@ async function renderBreakdown(range) {
     charts.pie = new Chart(document.getElementById('pieChart'), {
       type: 'doughnut',
       data: { labels, datasets: [{ data: values, backgroundColor: colors, borderColor: 'rgba(10,13,24,0.5)', borderWidth: 1.5, hoverOffset: 10 }] },
-      options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false }, pieValueLabels: { enabled: true }, pieGloss: { enabled: true } } },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false }, pieValueLabels: { enabled: true }, pieGloss: { enabled: true }, pieCenterText: { enabled: true } } },
     });
   } else {
     charts.pie.data.labels = labels;
@@ -373,13 +408,34 @@ async function renderWeekChart() {
   const completed = rows.map((r) => Number(r.completed_hours));
 
   if (charts.week) charts.week.destroy();
-  charts.week = new Chart(document.getElementById('weekChart'), {
+  const weekCanvas = document.getElementById('weekChart');
+  charts.week = new Chart(weekCanvas, {
     type: 'bar',
     data: {
       labels,
       datasets: [
-        { label: 'Planned (h)', data: planned, backgroundColor: 'rgba(169,123,255,0.18)', borderRadius: 6, barPercentage: 0.6 },
-        { label: 'Completed (h)', data: completed, backgroundColor: '#3DF5FF', borderRadius: 6, barPercentage: 0.6 },
+        {
+          label: 'Planned (h)', data: planned, borderRadius: 6, barPercentage: 0.6,
+          backgroundColor: (ctx) => {
+            const { chartArea } = ctx.chart;
+            if (!chartArea) return 'rgba(169,123,255,0.18)';
+            const g = ctx.chart.ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+            g.addColorStop(0, 'rgba(169,123,255,0.32)');
+            g.addColorStop(1, 'rgba(169,123,255,0.06)');
+            return g;
+          },
+        },
+        {
+          label: 'Completed (h)', data: completed, borderRadius: 6, barPercentage: 0.6,
+          backgroundColor: (ctx) => {
+            const { chartArea } = ctx.chart;
+            if (!chartArea) return '#3DF5FF';
+            const g = ctx.chart.ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+            g.addColorStop(0, '#7CF5FF');
+            g.addColorStop(1, '#17B8D4');
+            return g;
+          },
+        },
       ],
     },
     options: {
@@ -401,7 +457,22 @@ async function renderMonthChart() {
   if (charts.month) charts.month.destroy();
   charts.month = new Chart(document.getElementById('monthChart'), {
     type: 'line',
-    data: { labels, datasets: [{ label: 'Completion %', data: values, borderColor: '#FF4FCB', backgroundColor: 'rgba(255,79,203,0.12)', fill: true, tension: 0.4, pointBackgroundColor: '#FF4FCB', pointRadius: 4, borderWidth: 2 }] },
+    data: {
+      labels,
+      datasets: [{
+        label: 'Completion %', data: values, borderColor: '#FF4FCB',
+        backgroundColor: (ctx) => {
+          const { chartArea } = ctx.chart;
+          if (!chartArea) return 'rgba(255,79,203,0.12)';
+          const g = ctx.chart.ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+          g.addColorStop(0, 'rgba(255,79,203,0.30)');
+          g.addColorStop(1, 'rgba(255,79,203,0)');
+          return g;
+        },
+        fill: true, tension: 0.4, pointBackgroundColor: '#FF4FCB', pointBorderColor: '#0A0D18',
+        pointBorderWidth: 2, pointRadius: 4, pointHoverRadius: 6, borderWidth: 2,
+      }],
+    },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false } },
