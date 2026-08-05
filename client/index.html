@@ -15,13 +15,40 @@
 <!-- ================= LOGIN ================= -->
 <div id="loginScreen">
   <div class="login-visual">
-    <canvas id="brainCanvas"></canvas>
+    <svg class="visual-svg" viewBox="0 0 500 700" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="softBlur" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="55"/>
+        </filter>
+      </defs>
+
+      <!-- soft, matte, blurred color fields — this is what the glass panels below sit over -->
+      <g filter="url(#softBlur)">
+        <ellipse cx="150" cy="220" rx="140" ry="100" fill="#3DF5FF" opacity="0.28" transform="rotate(-18 150 220)"/>
+        <ellipse cx="340" cy="380" rx="150" ry="110" fill="#A97BFF" opacity="0.24" transform="rotate(14 340 380)"/>
+        <ellipse cx="200" cy="520" rx="120" ry="90" fill="#FF4FCB" opacity="0.16" transform="rotate(-8 200 520)"/>
+      </g>
+
+      <!-- faint static starfield -->
+      <g fill="#C8D4FF" opacity="0.5">
+        <circle cx="60" cy="80" r="1.3"/><circle cx="120" cy="40" r="1"/><circle cx="430" cy="70" r="1.4"/>
+        <circle cx="460" cy="160" r="1"/><circle cx="40" cy="620" r="1.2"/><circle cx="450" cy="650" r="1"/>
+        <circle cx="70" cy="60" r="1.1"/><circle cx="420" cy="30" r="1.3"/>
+      </g>
+    </svg>
+
+    <!-- floating frosted-glass panels — the actual visual, no icon/mascot -->
+    <div class="glass-pill gp-1"></div>
+    <div class="glass-pill gp-2"></div>
+    <div class="glass-pill gp-3"></div>
+    <div class="glass-orb go-1"></div>
+    <div class="glass-orb go-2"></div>
   </div>
 
   <div class="login-panel">
     <div class="login-card" id="loginFormCard">
       <div class="login-brand"><div></div></div>
-      <h1 class="display">Welcome back</h1>
+      <h1 class="display">Welcome b3nzy</h1>
       <div class="sub">Sign in to your personal planner</div>
 
       <div class="field">
@@ -38,9 +65,6 @@
           <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
           <svg class="toggle-eye" id="togglePassEye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
         </div>
-      </div>
-      <div style="text-align:right; margin-bottom:18px;">
-        <span class="link-btn" style="font-size:11px;">Forgot password?</span>
       </div>
       <button class="btn-primary login-btn-gradient" id="loginBtn">Sign in</button>
       <div class="sub" id="loginError" style="color:var(--magenta); font-size:12px; margin-top:14px; display:none;"></div>
@@ -268,7 +292,6 @@
 </div>
 
 <script src="config.js"></script>
-<script src="brain-canvas.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
