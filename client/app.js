@@ -20,16 +20,8 @@ async function api(path, options = {}) {
   return data;
 }
 
-// ==================== LOGIN VISUAL (neuron brain) ====================
-let brainInstance = null;
-function initBrainCanvas() {
-  const canvas = document.getElementById('brainCanvas');
-  if (canvas && !brainInstance) {
-    brainInstance = new NeuronBrain(canvas);
-  }
-}
-document.addEventListener('DOMContentLoaded', initBrainCanvas);
-if (document.readyState !== 'loading') initBrainCanvas();
+// ==================== LOGIN VISUAL ====================
+// The login background is now a static SVG (see index.html) — no JS animation loop to init.
 
 document.getElementById('togglePassEye').addEventListener('click', (e) => {
   const input = document.getElementById('loginPass');
@@ -74,7 +66,6 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
     errEl.style.display = 'none';
     document.getElementById('loginScreen').classList.add('hidden');
     document.body.classList.remove('pre-auth');
-    if (brainInstance) brainInstance.pause();
     document.getElementById('greetUsername').textContent = data.username;
     startApp();
   } catch (err) {
@@ -117,7 +108,6 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
     const me = await api('/auth/me');
     document.getElementById('loginScreen').classList.add('hidden');
     document.body.classList.remove('pre-auth');
-    if (brainInstance) brainInstance.pause();
     document.getElementById('greetUsername').textContent = me.username;
     startApp();
   } catch (e) {
@@ -568,7 +558,7 @@ document.getElementById('addBlockBtn').addEventListener('click', async () => {
 });
 
 // ==================== JOURNAL ====================
-let selectedMood = 3;
+let selectedMood = null; // nothing selected until the user actually picks one
 document.querySelectorAll('#moodRow .mood').forEach((m) => {
   m.addEventListener('click', () => {
     document.querySelectorAll('#moodRow .mood').forEach((x) => x.classList.remove('sel'));
@@ -577,7 +567,6 @@ document.querySelectorAll('#moodRow .mood').forEach((m) => {
   });
 });
 
-let pendingTags = [];
 const TAG_COLORS = ['#3DF5FF', '#A97BFF', '#FF4FCB', '#FFC15E'];
 // Same tag name always maps to the same color, wherever it's rendered (compose form or past entries) —
 // no DB column needed, just a stable hash over the name.
@@ -586,6 +575,13 @@ function colorForTag(name) {
   for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
   return TAG_COLORS[hash % TAG_COLORS.length];
 }
+
+const PRESET_TAGS = ['Blessed', 'Happy', 'Mindful', 'Serenity', 'Thoughtful', 'Productive', 'Divine'];
+function freshTagList() {
+  return PRESET_TAGS.map((name) => ({ name, selected: false, color: colorForTag(name) }));
+}
+let pendingTags = freshTagList();
+
 document.getElementById('addTagChip').addEventListener('click', () => {
   const name = prompt('New tag name:');
   if (!name) return;
@@ -608,6 +604,38 @@ function renderPendingTags() {
     row.insertBefore(chip, addBtn);
   });
 }
+renderPendingTags();
+
+// ---- Entry date: defaults to today, switchable to a past date so a forgotten day can be logged ----
+const todayISO = new Date().toISOString().slice(0, 10);
+let journalEntryDate = todayISO;
+const journalDateInput = document.getElementById('journalDateInput');
+journalDateInput.max = todayISO; // no future-dated entries
+journalDateInput.value = todayISO;
+
+document.querySelectorAll('#journalDateTabs .tabbtn').forEach((tab) => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('#journalDateTabs .tabbtn').forEach((t) => t.classList.remove('sel'));
+    tab.classList.add('sel');
+    const isCustom = tab.dataset.mode === 'custom';
+    document.getElementById('journalDateField').style.display = isCustom ? 'block' : 'none';
+    if (!isCustom) {
+      journalEntryDate = todayISO;
+      document.getElementById('journalEntryTitle').textContent = 'New entry — today';
+    } else {
+      journalEntryDate = journalDateInput.value || todayISO;
+      updateJournalEntryTitle();
+    }
+  });
+});
+journalDateInput.addEventListener('change', () => {
+  journalEntryDate = journalDateInput.value || todayISO;
+  updateJournalEntryTitle();
+});
+function updateJournalEntryTitle() {
+  const label = new Date(journalEntryDate + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  document.getElementById('journalEntryTitle').textContent = `New entry — ${label}`;
+}
 
 document.getElementById('saveEntryBtn').addEventListener('click', async () => {
   const content = document.getElementById('journalContent').value.trim();
@@ -618,19 +646,33 @@ document.getElementById('saveEntryBtn').addEventListener('click', async () => {
     msg.style.display = 'block';
     return;
   }
+  if (!selectedMood) {
+    msg.style.color = 'var(--magenta)';
+    msg.textContent = 'Pick a mood before saving.';
+    msg.style.display = 'block';
+    return;
+  }
   try {
     await api('/journal/entries', {
       method: 'POST',
       body: JSON.stringify({
-        entry_date: new Date().toISOString().slice(0, 10),
+        entry_date: journalEntryDate,
         mood: selectedMood,
         content,
         tags: pendingTags.filter((t) => t.selected).map((t) => t.name),
       }),
     });
     document.getElementById('journalContent').value = '';
-    pendingTags = [];
+    pendingTags = freshTagList();
     renderPendingTags();
+    document.querySelectorAll('#moodRow .mood').forEach((x) => x.classList.remove('sel'));
+    selectedMood = null;
+    document.querySelectorAll('#journalDateTabs .tabbtn').forEach((t) => t.classList.remove('sel'));
+    document.querySelector('#journalDateTabs .tabbtn[data-mode="today"]').classList.add('sel');
+    document.getElementById('journalDateField').style.display = 'none';
+    journalEntryDate = todayISO;
+    journalDateInput.value = todayISO;
+    document.getElementById('journalEntryTitle').textContent = 'New entry — today';
     msg.style.color = 'var(--cyan)';
     msg.textContent = 'Entry saved.';
     msg.style.display = 'block';

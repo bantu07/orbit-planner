@@ -48,7 +48,7 @@
   <div class="login-panel">
     <div class="login-card" id="loginFormCard">
       <div class="login-brand"><div></div></div>
-      <h1 class="display">Welcome b3nzy</h1>
+      <h1 class="display">Welcome back</h1>
       <div class="sub">Sign in to your personal planner</div>
 
       <div class="field">
@@ -65,6 +65,9 @@
           <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
           <svg class="toggle-eye" id="togglePassEye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
         </div>
+      </div>
+      <div style="text-align:right; margin-bottom:18px;">
+        <span class="link-btn" style="font-size:11px;">Forgot password?</span>
       </div>
       <button class="btn-primary login-btn-gradient" id="loginBtn">Sign in</button>
       <div class="sub" id="loginError" style="color:var(--magenta); font-size:12px; margin-top:14px; display:none;"></div>
@@ -250,12 +253,23 @@
 
       <div class="journal-grid">
         <div class="card">
-          <div class="card-title">New entry — today</div>
-          <div class="card-sub">How did it go?</div>
+          <div class="card-head-row">
+            <div>
+              <div class="card-title" id="journalEntryTitle">New entry — today</div>
+              <div class="card-sub">How did it go?</div>
+            </div>
+            <div class="tabbar" id="journalDateTabs">
+              <div class="tabbtn sel" data-mode="today">Today</div>
+              <div class="tabbtn" data-mode="custom">Choose date</div>
+            </div>
+          </div>
+          <div class="field" id="journalDateField" style="display:none; margin-top:-4px;">
+            <input type="date" id="journalDateInput">
+          </div>
           <div class="mood-row" id="moodRow">
             <div class="mood" data-mood="1">😔</div>
             <div class="mood" data-mood="2">😐</div>
-            <div class="mood sel" data-mood="3">🙂</div>
+            <div class="mood" data-mood="3">🙂</div>
             <div class="mood" data-mood="4">😄</div>
             <div class="mood" data-mood="5">🤩</div>
           </div>
