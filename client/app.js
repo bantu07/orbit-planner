@@ -298,7 +298,34 @@ const pieValueLabels = {
     ctx.restore();
   },
 };
-Chart.register(barValueLabels, pieValueLabels);
+const pieGloss = {
+  id: 'pieGloss',
+  afterDatasetsDraw(chart) {
+    if (!chart.options.plugins?.pieGloss?.enabled) return;
+    const { ctx } = chart;
+    const meta = chart.getDatasetMeta(0);
+    if (!meta.data.length) return;
+    const arc = meta.data[0];
+    const { x: cx, y: cy, innerRadius, outerRadius } = arc;
+    ctx.save();
+    // A soft light-from-above sheen across the top of the ring — the classic "glossy" cue,
+    // done as a single gradient wash rather than per-segment shading (cheap, and reads as
+    // one continuous glass ring rather than separately-lit slices).
+    ctx.beginPath();
+    ctx.arc(cx, cy, outerRadius, 0, Math.PI * 2);
+    ctx.arc(cx, cy, innerRadius, 0, Math.PI * 2, true);
+    ctx.clip('evenodd');
+    const grad = ctx.createLinearGradient(cx, cy - outerRadius, cx, cy + outerRadius);
+    grad.addColorStop(0, 'rgba(255,255,255,0.22)');
+    grad.addColorStop(0.35, 'rgba(255,255,255,0.04)');
+    grad.addColorStop(0.5, 'rgba(255,255,255,0)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.08)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(cx - outerRadius, cy - outerRadius, outerRadius * 2, outerRadius * 2);
+    ctx.restore();
+  },
+};
+Chart.register(barValueLabels, pieValueLabels, pieGloss);
 
 const gridColor = 'rgba(140,160,255,0.08)';
 const mutedColor = '#8792B0';
@@ -312,8 +339,8 @@ async function renderBreakdown(range) {
   if (!charts.pie) {
     charts.pie = new Chart(document.getElementById('pieChart'), {
       type: 'doughnut',
-      data: { labels, datasets: [{ data: values, backgroundColor: colors, borderColor: '#11152A', borderWidth: 3, hoverOffset: 8 }] },
-      options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { display: false }, pieValueLabels: { enabled: true } } },
+      data: { labels, datasets: [{ data: values, backgroundColor: colors, borderColor: 'rgba(10,13,24,0.5)', borderWidth: 1.5, hoverOffset: 10 }] },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false }, pieValueLabels: { enabled: true }, pieGloss: { enabled: true } } },
     });
   } else {
     charts.pie.data.labels = labels;
