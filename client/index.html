@@ -70,6 +70,11 @@
       </div>
       <button class="btn-primary login-btn-gradient" id="loginBtn">Sign in</button>
       <div class="sub" id="loginError" style="color:var(--magenta); font-size:12px; margin-top:14px; display:none;"></div>
+
+      <div class="card-loading-overlay" id="loginLoadingOverlay">
+        <div class="loading-ring"></div>
+        <div class="loading-text">Signing in</div>
+      </div>
     </div>
 
     <div class="login-card" id="lockoutCard" style="display:none;">
@@ -85,6 +90,11 @@
       </div>
       <button class="btn-primary login-btn-gradient" id="unlockBtn">Unlock account</button>
       <div class="sub" id="unlockError" style="color:var(--magenta); font-size:12px; margin-top:14px; display:none;"></div>
+
+      <div class="card-loading-overlay" id="unlockLoadingOverlay">
+        <div class="loading-ring" style="background:conic-gradient(from 220deg, var(--magenta), var(--amber), var(--magenta));"></div>
+        <div class="loading-text" style="color:var(--amber);">Unlocking</div>
+      </div>
     </div>
   </div>
 </div>

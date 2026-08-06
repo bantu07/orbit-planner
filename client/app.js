@@ -60,15 +60,18 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
   const username = document.getElementById('loginUser').value.trim();
   const password = document.getElementById('loginPass').value;
   const errEl = document.getElementById('loginError');
+  const loadingEl = document.getElementById('loginLoadingOverlay');
+  errEl.style.display = 'none';
+  loadingEl.classList.add('active');
   try {
     const data = await api('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
     localStorage.setItem(TOKEN_KEY, data.token);
-    errEl.style.display = 'none';
     document.getElementById('loginScreen').classList.add('hidden');
     document.body.classList.remove('pre-auth');
     document.getElementById('greetUsername').textContent = data.username;
     startApp();
   } catch (err) {
+    loadingEl.classList.remove('active');
     if (err.status === 423) {
       showLockout();
     } else {
@@ -84,12 +87,16 @@ document.getElementById('unlockBtn').addEventListener('click', async () => {
   const username = document.getElementById('loginUser').value.trim();
   const masterPassphrase = document.getElementById('masterPassInput').value;
   const errEl = document.getElementById('unlockError');
+  const loadingEl = document.getElementById('unlockLoadingOverlay');
+  errEl.style.display = 'none';
+  loadingEl.classList.add('active');
   try {
     await api('/auth/unlock', { method: 'POST', body: JSON.stringify({ username, masterPassphrase }) });
     document.getElementById('masterPassInput').value = '';
-    errEl.style.display = 'none';
+    loadingEl.classList.remove('active');
     showLoginForm();
   } catch (err) {
+    loadingEl.classList.remove('active');
     errEl.textContent = err.data?.error || 'Incorrect passphrase';
     errEl.style.display = 'block';
   }
