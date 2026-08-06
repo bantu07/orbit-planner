@@ -72,17 +72,35 @@
       <div class="sub" id="loginError" style="color:var(--magenta); font-size:12px; margin-top:14px; display:none;"></div>
 
       <div class="card-loading-overlay" id="loginLoadingOverlay">
-        <div class="loading-ring"></div>
-        <div class="loading-text">Signing in</div>
+        <div class="loading-spinner">
+          <svg class="loading-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <g class="ring ring-outer">
+              <circle cx="100" cy="100" r="88" fill="none" stroke="#3DF5FF" stroke-width="2.5" stroke-linecap="round" opacity="0.9" stroke-dasharray="95 45 60 45"/>
+            </g>
+            <g class="ring ring-mid">
+              <circle cx="100" cy="100" r="64" fill="none" stroke="#A97BFF" stroke-width="2.5" stroke-linecap="round" opacity="0.85" stroke-dasharray="70 35 45 35"/>
+            </g>
+            <g class="ring ring-inner">
+              <circle cx="100" cy="100" r="40" fill="none" stroke="#FF4FCB" stroke-width="2.5" stroke-linecap="round" opacity="0.9" stroke-dasharray="45 22 28 22"/>
+            </g>
+            <g fill="#5FD8FF">
+              <circle class="loading-dot" cx="176" cy="60" r="2.4" style="animation-delay:0s;"/>
+              <circle class="loading-dot" cx="28" cy="92" r="2" style="animation-delay:0.4s;"/>
+              <circle class="loading-dot" cx="150" cy="168" r="2.2" style="animation-delay:0.8s;"/>
+              <circle class="loading-dot" cx="46" cy="150" r="1.8" style="animation-delay:1.2s;"/>
+            </g>
+          </svg>
+          <div class="loading-text">Connecting</div>
+        </div>
       </div>
     </div>
 
     <div class="login-card" id="lockoutCard" style="display:none;">
       <div class="login-brand" style="background:conic-gradient(from 220deg, var(--magenta), var(--amber), var(--magenta));"><div></div></div>
       <h1 class="display">Account locked</h1>
-      <div class="sub">Too many incorrect attempts. Enter the master key to unlock.</div>
+      <div class="sub">Too many incorrect attempts. Enter the master passphrase to unlock.</div>
       <div class="field">
-        <label>Master Key</label>
+        <label>Master passphrase</label>
         <div class="login-input-wrap">
           <svg class="left-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
           <input type="password" id="masterPassInput" placeholder="Master passphrase">
@@ -92,8 +110,26 @@
       <div class="sub" id="unlockError" style="color:var(--magenta); font-size:12px; margin-top:14px; display:none;"></div>
 
       <div class="card-loading-overlay" id="unlockLoadingOverlay">
-        <div class="loading-ring" style="background:conic-gradient(from 220deg, var(--magenta), var(--amber), var(--magenta));"></div>
-        <div class="loading-text" style="color:var(--amber);">Unlocking</div>
+        <div class="loading-spinner">
+          <svg class="loading-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <g class="ring ring-outer">
+              <circle cx="100" cy="100" r="88" fill="none" stroke="#FF4FCB" stroke-width="2.5" stroke-linecap="round" opacity="0.9" stroke-dasharray="95 45 60 45"/>
+            </g>
+            <g class="ring ring-mid">
+              <circle cx="100" cy="100" r="64" fill="none" stroke="#FFC15E" stroke-width="2.5" stroke-linecap="round" opacity="0.85" stroke-dasharray="70 35 45 35"/>
+            </g>
+            <g class="ring ring-inner">
+              <circle cx="100" cy="100" r="40" fill="none" stroke="#FF4FCB" stroke-width="2.5" stroke-linecap="round" opacity="0.9" stroke-dasharray="45 22 28 22"/>
+            </g>
+            <g fill="#FFC15E">
+              <circle class="loading-dot" cx="176" cy="60" r="2.4" style="animation-delay:0s;"/>
+              <circle class="loading-dot" cx="28" cy="92" r="2" style="animation-delay:0.4s;"/>
+              <circle class="loading-dot" cx="150" cy="168" r="2.2" style="animation-delay:0.8s;"/>
+              <circle class="loading-dot" cx="46" cy="150" r="1.8" style="animation-delay:1.2s;"/>
+            </g>
+          </svg>
+          <div class="loading-text" style="color:var(--amber);">Unlocking</div>
+        </div>
       </div>
     </div>
   </div>
