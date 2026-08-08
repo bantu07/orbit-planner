@@ -158,6 +158,12 @@ function switchView(viewName) {
   document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
   document.getElementById(viewName).classList.add('active');
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Measuring offsetHeight on a hidden (display:none) section always returns 0 — so the
+  // Timeline/Add-a-block height sync has to (re)run *after* this section is actually visible,
+  // not just once during initial load.
+  if (viewName === 'planner') {
+    requestAnimationFrame(syncTimelineHeight);
+  }
 }
 
 document.querySelectorAll('.navicon[data-view]').forEach((nav) => {
@@ -561,7 +567,14 @@ function syncTimelineHeight() {
     timelineCard.style.height = '';
     return;
   }
-  timelineCard.style.height = addCard.offsetHeight + 'px';
+  const h = addCard.offsetHeight;
+  // A hidden ancestor (display:none) always measures 0 — never apply that, it collapses
+  // the card. Fall back to natural sizing (CSS handles a sane max-height) instead.
+  if (h < 100) {
+    timelineCard.style.height = '';
+    return;
+  }
+  timelineCard.style.height = h + 'px';
 }
 window.addEventListener('resize', () => {
   clearTimeout(window._timelineResizeT);

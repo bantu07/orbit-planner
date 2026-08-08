@@ -243,6 +243,7 @@
   #timelineCard{ display:flex; flex-direction:column; }
   .timeline-scroll{
     flex:1; min-height:0; overflow-y:auto; padding-right:6px; margin-right:-6px;
+    max-height:420px; /* sane fallback if the JS height-sync hasn't run (e.g. tab not visible yet) */
   }
   .timeline-scroll::-webkit-scrollbar{width:8px;}
   .timeline-scroll::-webkit-scrollbar-track{background:transparent;}
