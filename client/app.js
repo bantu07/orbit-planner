@@ -56,22 +56,52 @@ function showLoginForm() {
   }, 150);
 }
 
+// Shared full-page loading overlay — one element reused for both Sign in and Unlock,
+// since only one of those flows can ever be active at a time.
+function showLoadingOverlay(mode) {
+  const overlay = document.getElementById('loadingOverlay');
+  const text = document.getElementById('loadingText');
+  const outer = document.getElementById('loadingSvg').querySelector('.ring-outer-circle');
+  const mid = document.getElementById('loadingSvg').querySelector('.ring-mid-circle');
+  const inner = document.getElementById('loadingSvg').querySelector('.ring-inner-circle');
+  const dots = document.getElementById('loadingSvg').querySelector('.loading-dots-group');
+  if (mode === 'unlock') {
+    outer.setAttribute('stroke', '#FF4FCB');
+    mid.setAttribute('stroke', '#FFC15E');
+    inner.setAttribute('stroke', '#FF4FCB');
+    dots.setAttribute('fill', '#FFC15E');
+    text.style.color = 'var(--amber)';
+    text.textContent = 'Unlocking';
+  } else {
+    outer.setAttribute('stroke', '#3DF5FF');
+    mid.setAttribute('stroke', '#A97BFF');
+    inner.setAttribute('stroke', '#FF4FCB');
+    dots.setAttribute('fill', '#5FD8FF');
+    text.style.color = 'var(--cyan)';
+    text.textContent = 'Signing in';
+  }
+  overlay.classList.add('active');
+}
+function hideLoadingOverlay() {
+  document.getElementById('loadingOverlay').classList.remove('active');
+}
+
 document.getElementById('loginBtn').addEventListener('click', async () => {
   const username = document.getElementById('loginUser').value.trim();
   const password = document.getElementById('loginPass').value;
   const errEl = document.getElementById('loginError');
-  const loadingEl = document.getElementById('loginLoadingOverlay');
   errEl.style.display = 'none';
-  loadingEl.classList.add('active');
+  showLoadingOverlay('login');
   try {
     const data = await api('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
     localStorage.setItem(TOKEN_KEY, data.token);
     document.getElementById('loginScreen').classList.add('hidden');
     document.body.classList.remove('pre-auth');
     document.getElementById('greetUsername').textContent = data.username;
+    hideLoadingOverlay();
     startApp();
   } catch (err) {
-    loadingEl.classList.remove('active');
+    hideLoadingOverlay();
     if (err.status === 423) {
       showLockout();
     } else {
@@ -87,16 +117,15 @@ document.getElementById('unlockBtn').addEventListener('click', async () => {
   const username = document.getElementById('loginUser').value.trim();
   const masterPassphrase = document.getElementById('masterPassInput').value;
   const errEl = document.getElementById('unlockError');
-  const loadingEl = document.getElementById('unlockLoadingOverlay');
   errEl.style.display = 'none';
-  loadingEl.classList.add('active');
+  showLoadingOverlay('unlock');
   try {
     await api('/auth/unlock', { method: 'POST', body: JSON.stringify({ username, masterPassphrase }) });
     document.getElementById('masterPassInput').value = '';
-    loadingEl.classList.remove('active');
+    hideLoadingOverlay();
     showLoginForm();
   } catch (err) {
-    loadingEl.classList.remove('active');
+    hideLoadingOverlay();
     errEl.textContent = err.data?.error || 'Incorrect passphrase';
     errEl.style.display = 'block';
   }
@@ -517,7 +546,27 @@ async function loadPlanner() {
   renderTimeline('timelinePastWeek', pastBlocks, false);
   plannerPastEntriesCache = pastBlocks;
   renderPastPlannerEntries();
+  syncTimelineHeight();
 }
+
+// Match the Timeline card's height to "Add a block" so their bottoms align — the timeline
+// list scrolls internally instead of the card growing taller than its neighbor.
+function syncTimelineHeight() {
+  const addCard = document.getElementById('addBlockCard');
+  const timelineCard = document.getElementById('timelineCard');
+  if (!addCard || !timelineCard) return;
+  // Only enforce a matched height on wide layouts where the two cards actually sit
+  // side-by-side; on narrow/stacked layouts, let both size naturally.
+  if (window.innerWidth < 980) {
+    timelineCard.style.height = '';
+    return;
+  }
+  timelineCard.style.height = addCard.offsetHeight + 'px';
+}
+window.addEventListener('resize', () => {
+  clearTimeout(window._timelineResizeT);
+  window._timelineResizeT = setTimeout(syncTimelineHeight, 150);
+});
 
 let plannerPastEntriesCache = [];
 let plannerEntriesShowAll = false;

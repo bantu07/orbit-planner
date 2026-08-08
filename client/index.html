@@ -70,29 +70,6 @@
       </div>
       <button class="btn-primary login-btn-gradient" id="loginBtn">Sign in</button>
       <div class="sub" id="loginError" style="color:var(--magenta); font-size:12px; margin-top:14px; display:none;"></div>
-
-      <div class="card-loading-overlay" id="loginLoadingOverlay">
-        <div class="loading-spinner">
-          <svg class="loading-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-            <g class="ring ring-outer">
-              <circle cx="100" cy="100" r="88" fill="none" stroke="#3DF5FF" stroke-width="2.5" stroke-linecap="round" opacity="0.9" stroke-dasharray="95 45 60 45"/>
-            </g>
-            <g class="ring ring-mid">
-              <circle cx="100" cy="100" r="64" fill="none" stroke="#A97BFF" stroke-width="2.5" stroke-linecap="round" opacity="0.85" stroke-dasharray="70 35 45 35"/>
-            </g>
-            <g class="ring ring-inner">
-              <circle cx="100" cy="100" r="40" fill="none" stroke="#FF4FCB" stroke-width="2.5" stroke-linecap="round" opacity="0.9" stroke-dasharray="45 22 28 22"/>
-            </g>
-            <g fill="#5FD8FF">
-              <circle class="loading-dot" cx="176" cy="60" r="2.4" style="animation-delay:0s;"/>
-              <circle class="loading-dot" cx="28" cy="92" r="2" style="animation-delay:0.4s;"/>
-              <circle class="loading-dot" cx="150" cy="168" r="2.2" style="animation-delay:0.8s;"/>
-              <circle class="loading-dot" cx="46" cy="150" r="1.8" style="animation-delay:1.2s;"/>
-            </g>
-          </svg>
-          <div class="loading-text">Connecting</div>
-        </div>
-      </div>
     </div>
 
     <div class="login-card" id="lockoutCard" style="display:none;">
@@ -108,29 +85,33 @@
       </div>
       <button class="btn-primary login-btn-gradient" id="unlockBtn">Unlock account</button>
       <div class="sub" id="unlockError" style="color:var(--magenta); font-size:12px; margin-top:14px; display:none;"></div>
+    </div>
+  </div>
 
-      <div class="card-loading-overlay" id="unlockLoadingOverlay">
-        <div class="loading-spinner">
-          <svg class="loading-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-            <g class="ring ring-outer">
-              <circle cx="100" cy="100" r="88" fill="none" stroke="#FF4FCB" stroke-width="2.5" stroke-linecap="round" opacity="0.9" stroke-dasharray="95 45 60 45"/>
-            </g>
-            <g class="ring ring-mid">
-              <circle cx="100" cy="100" r="64" fill="none" stroke="#FFC15E" stroke-width="2.5" stroke-linecap="round" opacity="0.85" stroke-dasharray="70 35 45 35"/>
-            </g>
-            <g class="ring ring-inner">
-              <circle cx="100" cy="100" r="40" fill="none" stroke="#FF4FCB" stroke-width="2.5" stroke-linecap="round" opacity="0.9" stroke-dasharray="45 22 28 22"/>
-            </g>
-            <g fill="#FFC15E">
-              <circle class="loading-dot" cx="176" cy="60" r="2.4" style="animation-delay:0s;"/>
-              <circle class="loading-dot" cx="28" cy="92" r="2" style="animation-delay:0.4s;"/>
-              <circle class="loading-dot" cx="150" cy="168" r="2.2" style="animation-delay:0.8s;"/>
-              <circle class="loading-dot" cx="46" cy="150" r="1.8" style="animation-delay:1.2s;"/>
-            </g>
-          </svg>
-          <div class="loading-text" style="color:var(--amber);">Unlocking</div>
-        </div>
-      </div>
+  <!-- Shared full-page loading overlay — sits outside the cards on purpose: a position:fixed
+       element nested inside an ancestor with a CSS transform (the cards animate via transform)
+       gets trapped inside that ancestor's box instead of the true viewport. Living here lets it
+       genuinely center on and cover the whole screen. -->
+  <div class="fullpage-loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner">
+      <svg class="loading-svg" id="loadingSvg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <g class="ring ring-outer">
+          <circle class="ring-outer-circle" cx="100" cy="100" r="88" fill="none" stroke="#3DF5FF" stroke-width="2.5" stroke-linecap="round" opacity="0.9" stroke-dasharray="95 45 60 45"/>
+        </g>
+        <g class="ring ring-mid">
+          <circle class="ring-mid-circle" cx="100" cy="100" r="64" fill="none" stroke="#A97BFF" stroke-width="2.5" stroke-linecap="round" opacity="0.85" stroke-dasharray="70 35 45 35"/>
+        </g>
+        <g class="ring ring-inner">
+          <circle class="ring-inner-circle" cx="100" cy="100" r="40" fill="none" stroke="#FF4FCB" stroke-width="2.5" stroke-linecap="round" opacity="0.9" stroke-dasharray="45 22 28 22"/>
+        </g>
+        <g class="loading-dots-group" fill="#5FD8FF">
+          <circle class="loading-dot" cx="176" cy="60" r="2.4" style="animation-delay:0s;"/>
+          <circle class="loading-dot" cx="28" cy="92" r="2" style="animation-delay:0.4s;"/>
+          <circle class="loading-dot" cx="150" cy="168" r="2.2" style="animation-delay:0.8s;"/>
+          <circle class="loading-dot" cx="46" cy="150" r="1.8" style="animation-delay:1.2s;"/>
+        </g>
+      </svg>
+      <div class="loading-text" id="loadingText">Signing in</div>
     </div>
   </div>
 </div>
@@ -229,7 +210,7 @@
       </div>
 
       <div class="planner-grid">
-        <div class="card">
+        <div class="card" id="addBlockCard">
           <div class="card-title">Add a block</div>
           <div class="card-sub">Give it a time, a name, and a category</div>
 
@@ -256,7 +237,7 @@
           <div class="sub" id="blockFormMsg" style="font-size:12px; margin-top:10px; display:none;"></div>
         </div>
 
-        <div class="card">
+        <div class="card" id="timelineCard">
           <div class="card-head-row">
             <div>
               <div class="card-title">Timeline</div>
@@ -267,8 +248,10 @@
               <div class="tabbtn" data-range="pastweek">Past week</div>
             </div>
           </div>
-          <div class="timeline" id="timelineToday"></div>
-          <div class="timeline" id="timelinePastWeek" style="display:none;"></div>
+          <div class="timeline-scroll" id="timelineScroll">
+            <div class="timeline" id="timelineToday"></div>
+            <div class="timeline" id="timelinePastWeek" style="display:none;"></div>
+          </div>
           <div style="height:1px; background:var(--line); margin:16px 0 12px;"></div>
           <div class="sub" style="font-size:11.5px; color:var(--faint);">Entries older than 7 days are automatically archived on the server — new plans overwrite the oldest day on a rolling basis.</div>
         </div>
