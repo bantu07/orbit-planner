@@ -669,8 +669,11 @@ document.getElementById('viewAllPlannerEntries').addEventListener('click', () =>
   renderPastPlannerEntries();
 });
 
+let timelineBlocksById = {};
+
 function renderTimeline(containerId, blocks, showTimeOnly) {
   const el = document.getElementById(containerId);
+  blocks.forEach((b) => { timelineBlocksById[b.id] = b; });
   if (!blocks.length) {
     el.innerHTML = '<div class="sub">Nothing here yet.</div>';
     return;
@@ -679,12 +682,50 @@ function renderTimeline(containerId, blocks, showTimeOnly) {
     <div class="tl-item" data-id="${b.id}">
       <div class="tl-time">${showTimeOnly ? b.start_time.slice(0,5) : new Date(b.block_date).toLocaleDateString(undefined,{month:'short',day:'numeric'})}</div>
       <div class="tl-rail"><div class="tl-dot" style="color:${b.category_color || '#3DF5FF'}; background:${b.category_color || '#3DF5FF'};"></div><div class="tl-line"></div></div>
-      <div class="tl-content">
+      <div class="tl-content" style="cursor:pointer;">
         <div class="t">${escapeHtml(b.title)}</div>
         <div class="d">${b.category_name || 'Uncategorized'} · ${b.start_time.slice(0,5)}–${b.end_time.slice(0,5)}</div>
       </div>
     </div>`).join('');
+
+  el.querySelectorAll('.tl-content').forEach((content) => {
+    content.addEventListener('click', () => {
+      const id = content.closest('.tl-item').dataset.id;
+      openBlockModal(timelineBlocksById[id]);
+    });
+  });
 }
+
+function openBlockModal(block) {
+  if (!block) return;
+  const dateLabel = new Date(block.block_date + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+  const catColor = block.category_color || '#A97BFF';
+  document.getElementById('modalCategory').textContent = block.category_name || 'Uncategorized';
+  document.getElementById('modalCategory').style.setProperty('--tag-color', catColor);
+  document.getElementById('modalTitle').textContent = block.title;
+  document.getElementById('modalTime').textContent = `${dateLabel} · ${block.start_time.slice(0,5)}–${block.end_time.slice(0,5)}`;
+  const notesEl = document.getElementById('modalNotes');
+  if (block.notes) {
+    notesEl.textContent = block.notes;
+    notesEl.style.fontStyle = 'normal';
+    notesEl.style.color = '#C7CFE8';
+  } else {
+    notesEl.textContent = 'No additional notes for this block.';
+    notesEl.style.fontStyle = 'italic';
+    notesEl.style.color = 'var(--faint)';
+  }
+  document.getElementById('blockDetailModal').classList.add('active');
+}
+function closeBlockModal() {
+  document.getElementById('blockDetailModal').classList.remove('active');
+}
+document.getElementById('closeBlockModal').addEventListener('click', closeBlockModal);
+document.getElementById('blockDetailModal').addEventListener('click', (e) => {
+  if (e.target.id === 'blockDetailModal') closeBlockModal(); // click on the overlay itself, not the card
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeBlockModal();
+});
 
 document.getElementById('addBlockBtn').addEventListener('click', async () => {
   const title = document.getElementById('blockTitle').value.trim();
