@@ -408,7 +408,12 @@ const gridColor = 'rgba(140,160,255,0.08)';
 const mutedColor = '#8792B0';
 
 async function renderBreakdown(range) {
-  const data = await api(`/stats/breakdown/${range}`);
+  let url = `/stats/breakdown/${range}`;
+  if (range === 'monthly') {
+    const monthPicker = document.getElementById('breakdownMonthPicker');
+    if (monthPicker.value) url += `?month=${monthPicker.value}`;
+  }
+  const data = await api(url);
   const labels = data.map((d) => d.name);
   const values = data.map((d) => Number(d.hours));
   const colors = data.map((d) => d.color);
@@ -435,13 +440,29 @@ async function renderBreakdown(range) {
     </div>`).join('') || '<div class="sub">No data yet for this range.</div>';
 }
 
+// The month picker only makes sense in Monthly mode (Daily/Weekly are always "current"),
+// so it's hidden otherwise, and defaults to the current month whenever Monthly is selected.
+const breakdownMonthPicker = document.getElementById('breakdownMonthPicker');
+function currentMonthValue() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+breakdownMonthPicker.max = currentMonthValue(); // no browsing into the future
+
 document.querySelectorAll('#breakdownTabs .tabbtn').forEach((tab) => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('#breakdownTabs .tabbtn').forEach((t) => t.classList.remove('sel'));
     tab.classList.add('sel');
+    if (tab.dataset.range === 'monthly') {
+      breakdownMonthPicker.style.display = 'inline-block';
+      if (!breakdownMonthPicker.value) breakdownMonthPicker.value = currentMonthValue();
+    } else {
+      breakdownMonthPicker.style.display = 'none';
+    }
     renderBreakdown(tab.dataset.range);
   });
 });
+breakdownMonthPicker.addEventListener('change', () => renderBreakdown('monthly'));
 
 async function renderWeekChart() {
   const rows = await api('/stats/week');

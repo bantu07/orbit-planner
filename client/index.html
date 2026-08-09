@@ -173,10 +173,13 @@
             <div class="card-title">Activity breakdown</div>
             <div class="card-sub">Where your time actually goes</div>
           </div>
-          <div class="tabbar" id="breakdownTabs">
-            <div class="tabbtn sel" data-range="daily">Daily</div>
-            <div class="tabbtn" data-range="weekly">Weekly</div>
-            <div class="tabbtn" data-range="monthly">Monthly</div>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <input type="month" id="breakdownMonthPicker" class="month-picker" style="display:none;">
+            <div class="tabbar" id="breakdownTabs">
+              <div class="tabbtn sel" data-range="daily">Daily</div>
+              <div class="tabbtn" data-range="weekly">Weekly</div>
+              <div class="tabbtn" data-range="monthly">Monthly</div>
+            </div>
           </div>
         </div>
         <div class="breakdown-grid">

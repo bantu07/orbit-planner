@@ -534,6 +534,14 @@
   }
 
   /* ===== Tabs (breakdown pie) ===== */
+  .month-picker{
+    background:rgba(4,6,13,0.4); border:1px solid var(--glass-border); color:var(--text);
+    font-family:'JetBrains Mono', monospace; font-size:12px; padding:8px 12px; border-radius:100px;
+    outline:none; cursor:pointer; transition:.15s;
+  }
+  .month-picker:hover, .month-picker:focus{ border-color:rgba(61,245,255,0.5); }
+  .month-picker::-webkit-calendar-picker-indicator{ filter:invert(1) brightness(1.6); cursor:pointer; }
+
   .tabbar{
     display:flex; gap:6px;
     background:rgba(4,6,13,0.35);
