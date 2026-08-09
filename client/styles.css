@@ -120,6 +120,31 @@
   }
   @media (max-width:820px){ main{padding:20px; padding-left:max(20px, env(safe-area-inset-left)); padding-right:max(20px, env(safe-area-inset-right));} }
 
+  /* On wide screens, stop leaving the content capped in a narrow column with empty margins
+     either side — let it genuinely use the space, and scale typography up to match instead of
+     just stretching gaps between elements. */
+  @media (min-width:1500px){
+    main{ max-width:1680px; }
+    h1{ font-size:38px; }
+    .eyebrow{ font-size:13px; }
+    .sub{ font-size:15px; }
+    .card-title{ font-size:17px; }
+    .card-sub{ font-size:13px; }
+    .stat .val{ font-size:28px; }
+    .stat .lbl{ font-size:12px; }
+    .chart-box{ height:250px; }
+    .leg-row{ font-size:14px; }
+    .entry-text, .tl-content .d{ font-size:14.5px; }
+    .btn-primary{ font-size:15px; padding:16px; }
+  }
+  @media (min-width:1900px){
+    main{ max-width:1920px; }
+    h1{ font-size:42px; }
+    .card-title{ font-size:18px; }
+    .stat .val{ font-size:30px; }
+    .chart-box{ height:270px; }
+  }
+
   .topbar{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:34px; flex-wrap:wrap; gap:16px;}
   .eyebrow{font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--cyan); margin-bottom:6px; font-weight:500; cursor:default; user-select:none;}
   h1{font-family:'Space Grotesk'; font-size:32px; font-weight:600; letter-spacing:-0.01em; cursor:default; user-select:none;}
