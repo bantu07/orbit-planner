@@ -50,7 +50,7 @@
   <div class="login-panel">
     <div class="login-card" id="loginFormCard">
       <div class="login-brand"><div></div></div>
-      <h1 class="display">Welcome ben3zy</h1>
+      <h1 class="display">Welcome b3nzy</h1>
       <div class="sub">Sign in to your personal planner</div>
 
       <div class="field">
@@ -70,6 +70,37 @@
       </div>
       <button class="btn-primary login-btn-gradient" id="loginBtn">Sign in</button>
       <div class="sub" id="loginError" style="color:var(--magenta); font-size:12px; margin-top:14px; display:none;"></div>
+
+      <div class="guest-divider"><span>or</span></div>
+      <button class="btn-ghost" id="toPlannerBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:15px;height:15px;"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+        To Planner — today at a glance
+      </button>
+    </div>
+
+    <div class="login-card" id="publicClockCard" style="display:none; text-align:left; width:680px; max-width:94vw;">
+      <div class="card-head-row" style="margin-bottom:10px;">
+        <div>
+          <h1 class="display" style="font-size:20px; margin-bottom:2px;">Today's Plan</h1>
+          <div class="sub" style="margin-top:0;" id="publicClockDate"></div>
+        </div>
+        <span class="link-btn" id="backToLoginBtn" style="font-size:12px;">← Back to sign in</span>
+      </div>
+
+      <div style="background:rgba(140,160,255,0.06); border:1px solid var(--glass-border); border-radius:10px; padding:9px 12px; margin-bottom:14px; font-size:11.5px; color:var(--muted);">
+        Read-only view. Hover a segment for details. Sign in to make changes.
+      </div>
+
+      <div class="clock-wrap" id="publicClockWrap">
+        <svg id="publicClockSvg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div class="clock-center">
+          <div class="clock-day" id="publicClockDay">TODAY</div>
+          <div class="clock-total" id="publicClockTotal">0h 0m scheduled</div>
+        </div>
+        <div class="clock-tooltip" id="clockTooltip"></div>
+      </div>
+
+      <div id="publicClockList" style="margin-top:6px;"></div>
     </div>
 
     <div class="login-card" id="lockoutCard" style="display:none;">
@@ -111,7 +142,7 @@
           <circle class="loading-dot" cx="46" cy="150" r="1.8" style="animation-delay:1.2s;"/>
         </g>
       </svg>
-      <div class="loading-text" id="loadingText">Authenticating</div>
+      <div class="loading-text" id="loadingText">Signing in</div>
     </div>
   </div>
 </div>
@@ -230,7 +261,7 @@
           </div>
           <div class="field">
             <label>Category</label>
-            <div class="chip-row" id="categoryChips"></div>
+            <select id="categorySelect" class="theme-select"></select>
           </div>
           <div class="field">
             <label>Notes (optional)</label>
