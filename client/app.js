@@ -43,6 +43,142 @@ function showLockout() {
     requestAnimationFrame(() => requestAnimationFrame(() => lockCard.classList.remove('card-fade-out')));
   }, 150);
 }
+// ==================== PUBLIC READ-ONLY CLOCK ("To Planner") ====================
+// Renders today's blocks on a 24h dial with no login required. Data comes from the public
+// read-only endpoint, so nothing here can create, edit or delete — signing in is the only
+// way to change anything. Anything added/edited while signed in shows up here on next load.
+function showPublicClock() {
+  const formCard = document.getElementById('loginFormCard');
+  const clockCard = document.getElementById('publicClockCard');
+  formCard.classList.add('card-fade-out');
+  setTimeout(() => {
+    formCard.style.display = 'none';
+    formCard.classList.remove('card-fade-out');
+    clockCard.style.display = 'block';
+    clockCard.classList.add('card-fade-out');
+    requestAnimationFrame(() => requestAnimationFrame(() => clockCard.classList.remove('card-fade-out')));
+  }, 150);
+  document.querySelector('.login-panel').classList.add('center-mode');
+  loadPublicClock();
+}
+function hidePublicClock() {
+  const formCard = document.getElementById('loginFormCard');
+  const clockCard = document.getElementById('publicClockCard');
+  clockCard.classList.add('card-fade-out');
+  setTimeout(() => {
+    clockCard.style.display = 'none';
+    clockCard.classList.remove('card-fade-out');
+    formCard.style.display = 'block';
+    formCard.classList.add('card-fade-out');
+    requestAnimationFrame(() => requestAnimationFrame(() => formCard.classList.remove('card-fade-out')));
+  }, 150);
+  document.querySelector('.login-panel').classList.remove('center-mode');
+}
+document.getElementById('toPlannerBtn').addEventListener('click', showPublicClock);
+document.getElementById('backToLoginBtn').addEventListener('click', hidePublicClock);
+
+function pcPolar(cx, cy, r, angleDeg) {
+  const a = ((angleDeg - 90) * Math.PI) / 180;
+  return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
+}
+function pcRingPath(cx, cy, rIn, rOut, a1, a2) {
+  const so = pcPolar(cx, cy, rOut, a2), eo = pcPolar(cx, cy, rOut, a1);
+  const si = pcPolar(cx, cy, rIn, a2), ei = pcPolar(cx, cy, rIn, a1);
+  const large = a2 - a1 > 180 ? 1 : 0;
+  return `M ${so.x} ${so.y} A ${rOut} ${rOut} 0 ${large} 0 ${eo.x} ${eo.y} L ${ei.x} ${ei.y} A ${rIn} ${rIn} 0 ${large} 1 ${si.x} ${si.y} Z`;
+}
+function pcTimeAngle(hhmm) {
+  const [h, m] = hhmm.split(':').map(Number);
+  return ((h + m / 60) / 24) * 360;
+}
+
+async function loadPublicClock() {
+  const now = new Date();
+  document.getElementById('publicClockDate').textContent =
+    now.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+  document.getElementById('publicClockDay').textContent =
+    now.toLocaleDateString(undefined, { weekday: 'long' }).toUpperCase();
+
+  let blocks = [];
+  try {
+    const res = await fetch(`${API}/public/today`);
+    if (res.ok) blocks = await res.json();
+  } catch (e) { /* offline or API asleep — fall through to the empty state */ }
+
+  renderPublicClock(blocks);
+}
+
+function renderPublicClock(blocks) {
+  const cx = 200, cy = 200, rOuter = 195, rTickIn = 178, rArcOut = 172, rArcIn = 138;
+  const svg = document.getElementById('publicClockSvg');
+
+  let ticks = '';
+  for (let h = 0; h < 24; h++) {
+    const angle = (h / 24) * 360;
+    const major = h % 3 === 0;
+    const p1 = pcPolar(cx, cy, rTickIn, angle);
+    const p2 = pcPolar(cx, cy, major ? rOuter : rOuter - 8, angle);
+    ticks += `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="${major ? 'rgba(200,212,255,0.5)' : 'rgba(140,160,255,0.2)'}" stroke-width="${major ? 1.6 : 1}"/>`;
+    if (major) {
+      const lp = pcPolar(cx, cy, rOuter + 14, angle);
+      ticks += `<text x="${lp.x}" y="${lp.y}" fill="#8792B0" font-size="11" font-family="JetBrains Mono, monospace" text-anchor="middle" dominant-baseline="middle">${String(h).padStart(2, '0')}</text>`;
+    }
+  }
+
+  const arcs = blocks.map((b, i) => {
+    const color = b.category_color || '#3DF5FF';
+    let a1 = pcTimeAngle(b.start_time.slice(0, 5));
+    let a2 = pcTimeAngle(b.end_time.slice(0, 5));
+    let delta = a2 - a1;
+    if (delta <= 0) delta += 360; // overnight wraparound
+    return `<path class="clock-seg" data-idx="${i}" d="${pcRingPath(cx, cy, rArcIn, rArcOut, a1, a1 + delta)}" fill="${color}" color="${color}" opacity="0.85" stroke="rgba(10,13,24,0.6)" stroke-width="1.5"/>`;
+  }).join('');
+
+  const track = `<circle cx="${cx}" cy="${cy}" r="${(rArcOut + rArcIn) / 2}" fill="none" stroke="rgba(140,160,255,0.07)" stroke-width="${rArcOut - rArcIn}"/>`;
+  svg.innerHTML = track + arcs + ticks;
+
+  const totalMin = blocks.reduce((sum, b) => {
+    let d = pcTimeAngle(b.end_time.slice(0, 5)) - pcTimeAngle(b.start_time.slice(0, 5));
+    if (d <= 0) d += 360;
+    return sum + (d / 360) * 24 * 60;
+  }, 0);
+  document.getElementById('publicClockTotal').textContent =
+    `${Math.floor(totalMin / 60)}h ${Math.round(totalMin % 60)}m scheduled`;
+
+  // hover tooltip — title, time, category and notes
+  const tip = document.getElementById('clockTooltip');
+  const wrap = document.getElementById('publicClockWrap');
+  svg.querySelectorAll('.clock-seg').forEach((seg) => {
+    seg.addEventListener('mouseenter', () => {
+      const b = blocks[Number(seg.dataset.idx)];
+      tip.innerHTML = `
+        <div class="ct-title">${escapeHtml(b.title)}</div>
+        <div class="ct-meta">${b.start_time.slice(0,5)}–${b.end_time.slice(0,5)} · ${escapeHtml(b.category_name || 'Uncategorized')}</div>
+        ${b.notes ? `<div class="ct-notes">${escapeHtml(b.notes)}</div>` : ''}`;
+      tip.classList.add('show');
+    });
+    seg.addEventListener('mousemove', (e) => {
+      const r = wrap.getBoundingClientRect();
+      let x = e.clientX - r.left + 14;
+      let y = e.clientY - r.top + 14;
+      if (x + 230 > r.width) x = e.clientX - r.left - 230;
+      tip.style.left = x + 'px';
+      tip.style.top = y + 'px';
+    });
+    seg.addEventListener('mouseleave', () => tip.classList.remove('show'));
+  });
+
+  const list = document.getElementById('publicClockList');
+  list.innerHTML = blocks.length
+    ? blocks.map((b) => `
+      <div class="pc-item">
+        <span class="pc-dot" style="background:${b.category_color || '#3DF5FF'};"></span>
+        <span class="pc-title">${escapeHtml(b.title)}</span>
+        <span class="pc-time">${b.start_time.slice(0,5)}–${b.end_time.slice(0,5)}</span>
+      </div>`).join('')
+    : '<div class="sub" style="margin-top:0;">Nothing planned for today yet.</div>';
+}
+
 function showLoginForm() {
   const formCard = document.getElementById('loginFormCard');
   const lockCard = document.getElementById('lockoutCard');
@@ -208,51 +344,102 @@ function resetIdleTimer() {
 });
 
 // ==================== CATEGORIES ====================
+// Curated catalog of common activities — shown as ready-made dropdown options with their
+// own emoji + color, so picking a category is fast without needing to type anything. Any
+// entry here becomes a real category (via the API) the first time it's actually used.
+const TASK_CATALOG = [
+  { name: 'Studying', emoji: '📚', color: '#3DF5FF' },
+  { name: 'Brainstorming', emoji: '💡', color: '#A97BFF' },
+  { name: 'Planning', emoji: '🗒️', color: '#FF4FCB' },
+  { name: 'Work', emoji: '💼', color: '#FFC15E' },
+  { name: 'Job application', emoji: '📝', color: '#4ADE80' },
+  { name: 'Class', emoji: '🎓', color: '#60A5FA' },
+  { name: 'Travel', emoji: '✈️', color: '#FB923C' },
+  { name: 'Relax', emoji: '🌿', color: '#F472B6' },
+  { name: 'Monster mode', emoji: '👹', color: '#34D399' },
+  { name: 'Gym', emoji: '🏋️', color: '#818CF8' },
+  { name: 'Meditation', emoji: '🧘', color: '#FBBF24' },
+  { name: 'Journaling', emoji: '✍️', color: '#F87171' },
+  { name: 'Reflection', emoji: '✨', color: '#2DD4BF' },
+  { name: 'Outing', emoji: '🚶', color: '#C084FC' },
+  { name: 'Shopping', emoji: '🛍️', color: '#FACC15' },
+  { name: 'Appointment', emoji: '📅', color: '#FB7185' },
+  { name: 'Movie', emoji: '🎬', color: '#3DF5FF' },
+  { name: 'Bed Time', emoji: '🛏️', color: '#A97BFF' },
+  { name: 'Nap', emoji: '😴', color: '#FF4FCB' },
+  { name: 'Revision', emoji: '🔁', color: '#FFC15E' },
+  { name: 'Cooking', emoji: '🍳', color: '#4ADE80' },
+  { name: 'Cleaning', emoji: '🧹', color: '#60A5FA' },
+  { name: 'Washing', emoji: '🧺', color: '#FB923C' },
+  { name: 'Shower', emoji: '🚿', color: '#F472B6' },
+  { name: 'Prayer', emoji: '🙏', color: '#34D399' },
+  { name: 'Interview Preparation', emoji: '🎯', color: '#818CF8' },
+  { name: 'Interview', emoji: '🤝', color: '#FBBF24' },
+  { name: 'Break time', emoji: '☕', color: '#F87171' },
+  { name: 'Reading', emoji: '📖', color: '#2DD4BF' },
+  { name: 'Errands', emoji: '🏃', color: '#C084FC' },
+  { name: 'Meeting', emoji: '🤝', color: '#FACC15' },
+  { name: 'Coding', emoji: '💻', color: '#FB7185' },
+  { name: 'Study', emoji: '📘', color: '#3DF5FF' },
+  { name: 'Notes making', emoji: '🗒️', color: '#A97BFF' },
+  { name: 'Cysec zone', emoji: '🐈\u200d⬛⚔️', color: '#FF4FCB' },
+];
+
 async function loadCategories() {
   categories = await api('/planner/categories');
-  renderCategoryChips();
+  populateCategorySelect();
 }
 
-function renderCategoryChips() {
-  const row = document.getElementById('categoryChips');
-  row.querySelectorAll('.chip:not(.addchip)').forEach((c) => c.remove());
-  const addBtn = document.getElementById('addCategoryChip') || (() => {
-    const b = document.createElement('div');
-    b.className = 'chip addchip';
-    b.id = 'addCategoryChip';
-    b.textContent = '+ Add';
-    row.appendChild(b);
-    return b;
-  })();
-  categories.forEach((cat, i) => {
-    const chip = document.createElement('div');
-    chip.className = 'chip' + (i === 0 ? ' sel' : '');
-    chip.dataset.id = cat.id;
-    chip.style.setProperty('--chip-color', cat.color);
-    chip.textContent = cat.name;
-    chip.addEventListener('click', () => {
-      row.querySelectorAll('.chip').forEach((c) => c.classList.remove('sel'));
-      chip.classList.add('sel');
-    });
-    row.insertBefore(chip, addBtn);
-  });
-  addBtn.onclick = async () => {
-    const name = prompt('New category name:');
-    if (!name) return;
-    try {
-      const created = await api('/planner/categories', { method: 'POST', body: JSON.stringify({ name }) });
-      categories.push({ id: created.id, name, color: created.color });
-      renderCategoryChips();
-    } catch (err) {
-      alert(err.data?.error || 'Could not add category');
-    }
-  };
+function populateCategorySelect() {
+  const select = document.getElementById('categorySelect');
+  const existingNames = new Set(categories.map((c) => c.name));
+
+  let html = categories.map((c) => `<option value="id:${c.id}">${c.name}</option>`).join('');
+  html += TASK_CATALOG
+    .map((t, i) => ({ t, i }))
+    .filter(({ t }) => !existingNames.has(t.name))
+    .map(({ t, i }) => `<option value="cat:${i}">${t.emoji} ${t.name}</option>`)
+    .join('');
+  html += `<option value="__custom__">+ Add custom category</option>`;
+  select.innerHTML = html;
 }
 
-function selectedCategoryId() {
-  const sel = document.querySelector('#categoryChips .chip.sel');
-  return sel ? sel.dataset.id : null;
+document.getElementById('categorySelect').addEventListener('change', async (e) => {
+  if (e.target.value !== '__custom__') return;
+  const name = prompt('New category name:');
+  if (!name) {
+    e.target.value = categories[0] ? `id:${categories[0].id}` : '';
+    return;
+  }
+  try {
+    const palette = ['#3DF5FF', '#A97BFF', '#FF4FCB', '#FFC15E', '#4ADE80', '#60A5FA'];
+    const color = palette[Math.floor(Math.random() * palette.length)];
+    const created = await api('/planner/categories', { method: 'POST', body: JSON.stringify({ name, color }) });
+    categories.push({ id: created.id, name, color: created.color || color });
+    populateCategorySelect();
+    document.getElementById('categorySelect').value = `id:${created.id}`;
+  } catch (err) {
+    alert(err.data?.error || 'Could not add category');
+  }
+});
+
+// Resolves the current dropdown selection to a real category_id, lazily creating the
+// category via the API the first time a catalog entry is actually used.
+async function resolveSelectedCategoryId() {
+  const val = document.getElementById('categorySelect').value;
+  if (!val || val === '__custom__') return null;
+  if (val.startsWith('id:')) return Number(val.slice(3));
+  if (val.startsWith('cat:')) {
+    const t = TASK_CATALOG[Number(val.slice(4))];
+    const created = await api('/planner/categories', { method: 'POST', body: JSON.stringify({ name: t.name, color: t.color }) });
+    categories.push({ id: created.id, name: t.name, color: t.color });
+    populateCategorySelect();
+    document.getElementById('categorySelect').value = `id:${created.id}`;
+    return created.id;
+  }
+  return null;
 }
+
 
 // ==================== DASHBOARD ====================
 async function loadDashboard() {
@@ -487,6 +674,7 @@ async function renderWeekChart() {
             g.addColorStop(1, 'rgba(169,123,255,0.06)');
             return g;
           },
+          hoverBackgroundColor: 'rgba(169,123,255,0.55)',
         },
         {
           label: 'Completed (h)', data: completed, borderRadius: 6, barPercentage: 0.6,
@@ -498,12 +686,18 @@ async function renderWeekChart() {
             g.addColorStop(1, '#17B8D4');
             return g;
           },
+          hoverBackgroundColor: '#9FF9FF',
         },
       ],
     },
     options: {
       responsive: true, maintainAspectRatio: false, layout: { padding: { top: 16 } },
-      plugins: { legend: { labels: { color: mutedColor, font: { family: 'Inter', size: 11 }, boxWidth: 10 } }, barValueLabels: { enabled: true } },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { color: mutedColor, font: { family: 'Inter', size: 11 }, boxWidth: 10 } },
+        barValueLabels: { enabled: true },
+        tooltip: { mode: 'index', intersect: false },
+      },
       scales: {
         x: { grid: { display: false }, ticks: { color: mutedColor, font: { size: 11 } } },
         y: { grid: { color: gridColor }, ticks: { color: mutedColor, font: { size: 11 } } },
@@ -538,7 +732,8 @@ async function renderMonthChart() {
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
       scales: {
         x: { grid: { display: false }, ticks: { color: mutedColor, font: { size: 11 } } },
         y: { grid: { color: gridColor }, ticks: { color: mutedColor, font: { size: 11 } }, min: 0, max: 100 },
@@ -753,7 +948,6 @@ document.getElementById('addBlockBtn').addEventListener('click', async () => {
   const start = document.getElementById('blockStart').value;
   const end = document.getElementById('blockEnd').value;
   const notes = document.getElementById('blockNotes').value.trim();
-  const category_id = selectedCategoryId();
   const msg = document.getElementById('blockFormMsg');
 
   if (!title || !start || !end) {
@@ -762,6 +956,8 @@ document.getElementById('addBlockBtn').addEventListener('click', async () => {
     msg.style.display = 'block';
     return;
   }
+
+  const category_id = await resolveSelectedCategoryId();
 
   try {
     await api('/planner/blocks', {
