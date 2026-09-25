@@ -7,6 +7,7 @@ const authRoutes = require('./routes/auth');
 const plannerRoutes = require('./routes/planner');
 const journalRoutes = require('./routes/journal');
 const statsRoutes = require('./routes/stats');
+const publicRoutes = require('./routes/public');
 
 const app = express();
 
@@ -20,6 +21,9 @@ app.use(
 );
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
+
+// Public, unauthenticated, read-only — today's blocks for the no-login clock view.
+app.use('/api/public', publicRoutes);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/planner', plannerRoutes);
