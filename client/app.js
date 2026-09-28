@@ -482,7 +482,9 @@ function renderStatCards(blocks) {
 function hoursBetween(start, end) {
   const [sh, sm] = start.split(':').map(Number);
   const [eh, em] = end.split(':').map(Number);
-  return (eh * 60 + em - (sh * 60 + sm)) / 60;
+  let minutes = (eh * 60 + em) - (sh * 60 + sm);
+  if (minutes < 0) minutes += 24 * 60; // overnight block (e.g. 23:00–07:00) — wrap to next day
+  return minutes / 60;
 }
 
 // ---- Chart plugins (draw values directly on the chart) ----
